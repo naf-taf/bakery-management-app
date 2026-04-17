@@ -59,6 +59,30 @@ When the app is built for distribution, use the packaged installer or portable o
 
 To install or run the published version, open the generated installer or portable artifact from `dist/`.
 
+## Versioning And Auto Releases
+
+The project uses tag-based releases.
+
+- CI (`.github/workflows/ci.yml`) runs on `main` and pull requests for validation builds.
+- Release workflow (`.github/workflows/release.yml`) runs automatically when a Git tag matching `v*.*.*` is pushed.
+- The release workflow builds the app and publishes GitHub Release assets from `dist/`.
+
+Release steps:
+
+```bash
+# 1) Update versions in package.json files if needed
+
+# 2) Commit changes
+git add .
+git commit -m "chore: release 1.0.1"
+
+# 3) Create and push a version tag
+git tag v1.0.1
+git push origin main --tags
+```
+
+After the tag push, GitHub Actions will create the release and attach installer/portable artifacts automatically.
+
 ## Database
 
 The app uses SQLite database stored in `db/bakery.db`. Schema is defined in `db/schema.sql`.

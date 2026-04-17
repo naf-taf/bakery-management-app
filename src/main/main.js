@@ -37,7 +37,6 @@ app.on('ready', () => {
     : path.join(__dirname, '../../db');
 
   // Ensure db directory exists
-  const fs = require('fs');
   if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
   }

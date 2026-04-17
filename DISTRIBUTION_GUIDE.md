@@ -267,9 +267,20 @@ powershell Compress-Archive -Path "dist\*" -DestinationPath "Bakery-Management-v
 1. Внесите изменения в код
 2. Увеличьте версию в `package.json`
 3. Протестируйте изменения
-4. Соберите новую версию (`npm run dist`)
-5. Протестируйте установщик
-6. Распространите обновление
+4. Закоммитьте изменения и создайте тег версии вида `vX.Y.Z`
+5. Отправьте изменения и тег в репозиторий
+6. GitHub Actions автоматически соберет релиз и опубликует артефакты
+
+Пример:
+
+```bash
+git add .
+git commit -m "chore: release 1.0.1"
+git tag v1.0.1
+git push origin main --tags
+```
+
+Workflow `.github/workflows/release.yml` публикует GitHub Release и прикрепляет файлы из `dist/`.
 
 ### Совместимость версий
 
