@@ -45,7 +45,7 @@
     "concurrently": "^9.2.1",
     "electron": "^24.4.0",
     "electron-builder": "^26.8.1",
-    "wait-on": "^7.0.1"
+    "wait-on": "^9.0.5"
   },
   "overrides": {
     "glob": "^11.0.0",
