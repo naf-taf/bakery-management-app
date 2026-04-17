@@ -1,19 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useDeferredValue, useEffect, useState } from 'react';
 
 const { electronAPI } = window;
 
-function Ingredients() {
+function Ingredients({ isActive }) {
   const [ingredients, setIngredients] = useState([]);
-  const [form, setForm] = useState({ name: '', unit: 'гр', cost_per_unit: 0 });
+  const [form, setForm] = useState({ name: '', unit: 'гр', cost_per_unit: '0' });
   const [editing, setEditing] = useState(null);
   const [filter, setFilter] = useState('');
+  const deferredFilter = useDeferredValue(filter);
 
   useEffect(() => {
-    loadIngredients();
-  }, []);
+    if (isActive) {
+      loadIngredients();
+    }
+  }, [isActive]);
 
+  const normalizedFilter = deferredFilter.trim().toLowerCase();
   const filteredIngredients = ingredients.filter((ingredient) =>
-    ingredient.name.toLowerCase().includes(filter.toLowerCase()),
+    ingredient.name.toLowerCase().includes(normalizedFilter),
   );
 
   const loadIngredients = async () => {
@@ -28,6 +32,9 @@ function Ingredients() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const parsedCost = parseFloat(form.cost_per_unit || '0');
+      const costPerUnit = Number.isFinite(parsedCost) ? parsedCost : 0;
+
       // Check for duplicate names
       const existingIngredient = ingredients.find(
         (ing) =>
@@ -42,16 +49,16 @@ function Ingredients() {
       if (editing) {
         await electronAPI.dbRun(
           'UPDATE ingredients SET name = ?, unit = ?, cost_per_unit = ? WHERE id = ?',
-          [form.name, form.unit, form.cost_per_unit, editing],
+          [form.name, form.unit, costPerUnit, editing],
         );
         setEditing(null);
       } else {
         await electronAPI.dbRun(
           'INSERT INTO ingredients (name, unit, cost_per_unit) VALUES (?, ?, ?)',
-          [form.name, form.unit, form.cost_per_unit],
+          [form.name, form.unit, costPerUnit],
         );
       }
-      setForm({ name: '', unit: 'гр', cost_per_unit: 0 });
+      setForm({ name: '', unit: 'гр', cost_per_unit: '0' });
       loadIngredients();
     } catch (error) {
       console.error('Error saving ingredient:', error);
@@ -60,7 +67,11 @@ function Ingredients() {
   };
 
   const handleEdit = (ingredient) => {
-    setForm(ingredient);
+    setForm({
+      name: ingredient.name,
+      unit: ingredient.unit,
+      cost_per_unit: String(ingredient.cost_per_unit ?? 0),
+    });
     setEditing(ingredient.id);
   };
 
@@ -109,7 +120,7 @@ function Ingredients() {
             step="0.01"
             placeholder="Стоимость за единицу"
             value={form.cost_per_unit}
-            onChange={(e) => setForm({ ...form, cost_per_unit: parseFloat(e.target.value) || 0 })}
+            onChange={(e) => setForm({ ...form, cost_per_unit: e.target.value })}
             className="modern-input"
             min="0"
           />
@@ -121,7 +132,7 @@ function Ingredients() {
               type="button"
               onClick={() => {
                 setEditing(null);
-                setForm({ name: '', unit: 'гр', cost_per_unit: 0 });
+                setForm({ name: '', unit: 'гр', cost_per_unit: '0' });
               }}
               className="modern-button secondary">
               Отмена

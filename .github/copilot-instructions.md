@@ -1,58 +1,65 @@
-# Bakery Management App - AI Agent Instructions
+# Bakery Management App - Copilot Instructions
 
-This is an Electron + React desktop application for bakery operations management. See [README.md](../README.md) for setup and project overview.
+This repository is an Electron desktop app with a React + Vite renderer and SQLite storage.
 
-## Essential Commands
+## Project Map
 
-| Task                     | Command         |
-| ------------------------ | --------------- |
-| Development (hot reload) | `npm run dev`   |
-| Build renderer app       | `npm run build` |
-| Start production app     | `npm start`     |
-| Package as distributable | `npm run dist`  |
+- Main process: `src/main/main.js`
+- Preload bridge: `src/main/preload.js`
+- Renderer app: `src/renderer/src/`
+- Renderer entry HTML: `src/renderer/index.html`
+- Renderer config: `src/renderer/vite.config.js`
+- Database schema: `db/schema.sql`
 
-**Key Detail**: Root `package.json` is for Electron; `src/renderer/package.json` is for React. Install renderer deps with `cd src/renderer && npm install`.
+## Build, Test, And Validate
 
-## Architecture & Key Files
+Run commands from repository root unless stated otherwise.
 
-### IPC Communication Pattern
+- Install root dependencies: `npm install`
+- Install renderer dependencies: `npm install --prefix src/renderer`
+- Dev mode (Electron + Vite): `npm run dev`
+- Build renderer: `npm run build`
+- Package Electron app: `npm run dist`
+- Production smoke check: `npm start`
 
-- **Preload Bridge**: [src/main/preload.js](../src/main/preload.js) exposes `window.electronAPI` with `dbQuery()` and `dbRun()` methods
-- **Main Process**: [src/main/main.js](../src/main/main.js) handles database init and IPC listeners
-- **Security**: contextIsolation enabled, nodeIntegration disabled - all database access goes through IPC
-- **Usage in Components**: `const { electronAPI } = window;` then `await electronAPI.dbQuery(sql, params)`
+When making code changes, validate at minimum:
 
-### Database
+1. `npm run build` succeeds.
+2. `npm run dist` succeeds for packaging-sensitive changes.
+3. No renderer code bypasses preload IPC.
 
-- SQLite database at `db/bakery.db` (created automatically on app start)
-- Schema: [db/schema.sql](../db/schema.sql) - defines ingredients, recipes, baking_plans, kneading_batches
-- Foreign key relationships are enforced; use CASCADE deletes as appropriate
+## Architecture Rules
 
-### Components
+- Keep `contextIsolation: true` and `nodeIntegration: false`.
+- Renderer must not import Node modules or access SQLite directly.
+- Database operations are routed through `window.electronAPI` only.
+- IPC channels are defined in main process and exposed in preload.
+- In dev, load `http://localhost:5173`; in packaged mode, load renderer from `src/renderer/build/index.html`.
 
-- Navigation-based view system in [src/renderer/src/App.jsx](../src/renderer/src/App.jsx)
-- Each module (Ingredients, Recipes, BakingPlans, KneadingLists) is a React component in `src/renderer/src/`
-- UI uses inline styles; consider extracting to `App.css` for consistency
+## Database Conventions
 
-## Development Conventions
+- Schema changes go to `db/schema.sql`.
+- Keep runtime table creation/migration logic in `src/main/main.js` aligned with schema.
+- Use foreign keys and `ON DELETE CASCADE` where relationships require cleanup.
 
-- **React Hooks**: Use `useState`, `useEffect` for state and side effects
-- **Async Database**: All database calls use `async/await` with `electronAPI` bridge
-- **Error Handling**: Wrap `electronAPI` calls in try/catch; log errors to console
-- **i18n Context**: UI text is bilingual (English code, Russian labels in JSX)
+## UI Conventions
 
-## Common Pitfalls
+- Follow existing navigation pattern in `src/renderer/src/App.jsx`.
+- Use React hooks for component state and side effects.
+- Keep visible labels aligned with current bilingual style (English code, Russian UI labels where already used).
 
-1. **Two package.json files**: Don't forget to run `npm install` in both root and `src/renderer`
-2. **Production vs Dev**: Production mode loads built renderer from `src/renderer/build/index.html`; dev mode uses `http://localhost:5173`
-3. **Database Paths**: All database operations use paths relative to `src/main/main.js`; paths in renderer must go through IPC
-4. **IPC Calls Are Async**: Always `await` when calling `electronAPI.dbQuery()` or `dbRun()`
+## Release And CI
 
-## New Features
+- CI workflow validates branch/PR builds.
+- Release workflow triggers on tags matching `v*.*.*`.
+- Standard release flow:
+  1.  Commit changes to main.
+  2.  Create tag: `git tag vX.Y.Z`.
+  3.  Push tag: `git push origin vX.Y.Z`.
 
-When adding features:
+## Change Scope Guidance
 
-1. Add database schema changes to [db/schema.sql](../db/schema.sql)
-2. Add IPC listeners in `src/main/main.js` if needed
-3. Create React component in `src/renderer/src/` with `electronAPI` calls
-4. Add navigation button in `App.jsx` to expose the new view
+- Prefer minimal, targeted edits.
+- Preserve existing code style and file structure.
+- Avoid broad refactors unless explicitly requested.
+- Add concise error handling around DB and IPC operations when touching those areas.

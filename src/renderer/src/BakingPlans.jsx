@@ -2,18 +2,30 @@ import React, { useState, useEffect } from 'react';
 
 const { electronAPI } = window;
 
-function BakingPlans() {
+function BakingPlans({ isActive }) {
   const [plans, setPlans] = useState([]);
   const [recipes, setRecipes] = useState([]);
-  const [form, setForm] = useState({ date: '', recipe_id: '', quantity: 1 });
+  const [form, setForm] = useState({ date: '', recipe_id: '', quantity: '1' });
   const [editing, setEditing] = useState(null);
+  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [filterStart, setFilterStart] = useState('');
   const [filterEnd, setFilterEnd] = useState('');
 
   useEffect(() => {
-    loadPlans();
-    loadRecipes();
-  }, []);
+    if (isActive) {
+      loadPlans();
+      loadRecipes();
+    }
+  }, [isActive]);
+
+  useEffect(() => {
+    if (!isActive) {
+      setShowPlanModal(false);
+      setEditing(null);
+      setForm({ date: '', recipe_id: '', quantity: '1' });
+    }
+  }, [isActive]);
 
   const loadPlans = async () => {
     try {
@@ -40,7 +52,16 @@ function BakingPlans() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
     try {
+      const parsedQuantity = parseInt(form.quantity || '1', 10) || 1;
+
       if (editing) {
         const existing = await electronAPI.dbQuery(
           'SELECT * FROM baking_plans WHERE date = ? AND recipe_id = ? AND id != ?',
@@ -50,14 +71,18 @@ function BakingPlans() {
         if (existing.length > 0) {
           const target = existing[0];
           await electronAPI.dbRun('UPDATE baking_plans SET quantity = ? WHERE id = ?', [
-            target.quantity + form.quantity,
+            target.quantity + parsedQuantity,
             target.id,
+          ]);
+          await electronAPI.dbRun('UPDATE kneading_batches SET plan_id = ? WHERE plan_id = ?', [
+            target.id,
+            editing,
           ]);
           await electronAPI.dbRun('DELETE FROM baking_plans WHERE id = ?', [editing]);
         } else {
           await electronAPI.dbRun(
             'UPDATE baking_plans SET date = ?, recipe_id = ?, quantity = ? WHERE id = ?',
-            [form.date, form.recipe_id, form.quantity, editing],
+            [form.date, form.recipe_id, parsedQuantity, editing],
           );
         }
 
@@ -71,30 +96,60 @@ function BakingPlans() {
         if (existing.length > 0) {
           const target = existing[0];
           await electronAPI.dbRun('UPDATE baking_plans SET quantity = ? WHERE id = ?', [
-            target.quantity + form.quantity,
+            target.quantity + parsedQuantity,
             target.id,
           ]);
         } else {
           await electronAPI.dbRun(
             'INSERT INTO baking_plans (date, recipe_id, quantity) VALUES (?, ?, ?)',
-            [form.date, form.recipe_id, form.quantity],
+            [form.date, form.recipe_id, parsedQuantity],
           );
         }
       }
-      setForm({ date: '', recipe_id: '', quantity: 1 });
+      setForm({ date: '', recipe_id: '', quantity: '1' });
+      setShowPlanModal(false);
+      setEditing(null);
       loadPlans();
     } catch (error) {
       console.error('Error saving plan:', error);
+      alert('Ошибка при сохранении плана: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleEdit = (plan) => {
+    if (isSubmitting) {
+      return;
+    }
+
     setForm({
       date: plan.date,
-      recipe_id: plan.recipe_id,
-      quantity: plan.quantity,
+      recipe_id: String(plan.recipe_id),
+      quantity: String(plan.quantity),
     });
     setEditing(plan.id);
+    setShowPlanModal(true);
+  };
+
+  const openCreatePlanModal = () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    setEditing(null);
+    setForm({ date: '', recipe_id: '', quantity: '1' });
+    setShowPlanModal(true);
+  };
+
+  const closePlanModal = () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    setShowPlanModal(false);
+    setEditing(null);
+    setForm({ date: '', recipe_id: '', quantity: '1' });
   };
 
   const handleDelete = async (id) => {
@@ -122,135 +177,23 @@ function BakingPlans() {
     setFilterEnd('');
   };
 
+  const filteredPlans = getFilteredPlans();
+
   return (
     <div className="content-card">
       <h2>Планы выпечки</h2>
 
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          marginBottom: '2rem',
-          padding: '2rem',
-          background: 'rgba(255, 255, 255, 0.8)',
-          borderRadius: '12px',
-          border: '1px solid rgba(0, 0, 0, 0.1)',
-        }}>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr',
-            gap: '1rem',
-            marginBottom: '1rem',
-          }}>
-          <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontWeight: '500',
-                color: '#333',
-              }}>
-              Дата выпечки
-            </label>
-            <input
-              type="date"
-              value={form.date}
-              onChange={(e) => setForm({ ...form, date: e.target.value })}
-              className="modern-input"
-              required
-            />
-          </div>
-          <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontWeight: '500',
-                color: '#333',
-              }}>
-              Рецепт
-            </label>
-            <select
-              value={form.recipe_id}
-              onChange={(e) => setForm({ ...form, recipe_id: e.target.value })}
-              className="modern-input"
-              required>
-              <option value="">Выберите рецепт</option>
-              {recipes.map((recipe) => (
-                <option key={recipe.id} value={recipe.id}>
-                  {recipe.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontWeight: '500',
-                color: '#333',
-              }}>
-              Количество для выпечки
-            </label>
-            <input
-              type="number"
-              value={form.quantity}
-              onChange={(e) => setForm({ ...form, quantity: parseInt(e.target.value) || 1 })}
-              className="modern-input"
-              min="1"
-              required
-            />
-          </div>
-        </div>
+      <div className="plans-header-actions">
+        <button type="button" className="modern-button" onClick={openCreatePlanModal}>
+          Добавить план
+        </button>
+      </div>
 
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <button type="submit" className="modern-button">
-            {editing ? 'Обновить план' : 'Добавить план'}
-          </button>
-          {editing && (
-            <button
-              type="button"
-              onClick={() => {
-                setEditing(null);
-                setForm({ date: '', recipe_id: '', quantity: 1 });
-              }}
-              className="modern-button secondary">
-              Отмена
-            </button>
-          )}
-        </div>
-      </form>
-
-      <div
-        style={{
-          marginBottom: '2rem',
-          padding: '1.5rem',
-          background: 'rgba(255, 255, 255, 0.8)',
-          borderRadius: '12px',
-          border: '1px solid rgba(0, 0, 0, 0.1)',
-        }}>
-        <div
-          style={{ marginBottom: '1rem', fontSize: '0.95rem', fontWeight: '500', color: '#333' }}>
-          Фильтр по датам
-        </div>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr auto auto',
-            gap: '1rem',
-            alignItems: 'end',
-          }}>
+      <div className="plans-panel plans-filter-panel">
+        <div className="plans-panel-title">Фильтр по датам</div>
+        <div className="plans-filter-grid">
           <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.9rem',
-                color: '#555',
-              }}>
-              От даты
-            </label>
+            <label className="plans-label secondary">От даты</label>
             <input
               type="date"
               value={filterStart}
@@ -259,15 +202,7 @@ function BakingPlans() {
             />
           </div>
           <div>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.9rem',
-                color: '#555',
-              }}>
-              До даты
-            </label>
+            <label className="plans-label secondary">До даты</label>
             <input
               type="date"
               value={filterEnd}
@@ -275,17 +210,83 @@ function BakingPlans() {
               className="modern-input"
             />
           </div>
-          <button
-            onClick={handleResetFilter}
-            className="modern-button secondary"
-            style={{ padding: '10px 16px', fontSize: '0.9rem' }}>
+          <button onClick={handleResetFilter} className="modern-button secondary plans-reset-button">
             Сбросить фильтр
           </button>
-          <div style={{ fontSize: '0.85rem', color: '#666' }}>
-            Найдено: {getFilteredPlans().length}
-          </div>
+          <div className="plans-filter-count">Найдено: {filteredPlans.length}</div>
         </div>
       </div>
+
+      {showPlanModal && (
+        <div className="plans-modal-backdrop">
+          <div className="plans-modal">
+            <div className="plans-modal-header">
+              <h3>{editing ? 'Редактирование плана' : 'Добавление плана'}</h3>
+              <button
+                type="button"
+                className="plans-modal-close"
+                onClick={closePlanModal}
+                disabled={isSubmitting}>
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              <div className="plans-form-grid">
+                <div>
+                  <label className="plans-label">Дата выпечки</label>
+                  <input
+                    type="date"
+                    value={form.date}
+                    onChange={(e) => setForm({ ...form, date: e.target.value })}
+                    className="modern-input"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="plans-label">Рецепт</label>
+                  <select
+                    value={form.recipe_id}
+                    onChange={(e) => setForm({ ...form, recipe_id: e.target.value })}
+                    className="modern-input"
+                    required>
+                    <option value="">Выберите рецепт</option>
+                    {recipes.map((recipe) => (
+                      <option key={recipe.id} value={recipe.id}>
+                        {recipe.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="plans-label">Количество для выпечки</label>
+                  <input
+                    type="number"
+                    value={form.quantity}
+                    onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+                    className="modern-input"
+                    min="1"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="plans-actions">
+                <button type="submit" className="modern-button" disabled={isSubmitting}>
+                  {isSubmitting ? 'Сохранение...' : editing ? 'Обновить план' : 'Добавить план'}
+                </button>
+                <button
+                  type="button"
+                  className="modern-button secondary"
+                  onClick={closePlanModal}
+                  disabled={isSubmitting}>
+                  Отмена
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <table className="modern-table">
         <thead>
@@ -297,7 +298,7 @@ function BakingPlans() {
           </tr>
         </thead>
         <tbody>
-          {getFilteredPlans().map((plan) => (
+          {filteredPlans.map((plan) => (
             <tr key={plan.id}>
               <td>{plan.date}</td>
               <td>{plan.recipe_name}</td>

@@ -74,10 +74,10 @@ Release steps:
 
 # 2) Commit changes
 git add .
-git commit -m "chore: release 1.0.1"
+git commit -m "chore: release 1.0.2"
 
 # 3) Create and push a version tag
-git tag v1.0.1
+git tag v1.0.2
 git push origin main --tags
 ```
 

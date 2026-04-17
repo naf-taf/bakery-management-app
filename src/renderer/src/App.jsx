@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { startTransition, useState } from 'react';
 import './App.css';
 import Ingredients from './Ingredients';
 import Recipes from './Recipes';
@@ -7,6 +7,16 @@ import KneadingLists from './KneadingLists';
 
 function App() {
   const [currentView, setCurrentView] = useState('ingredients');
+  const [mountedViews, setMountedViews] = useState(['ingredients']);
+
+  const showView = (view) => {
+    startTransition(() => {
+      setCurrentView(view);
+      setMountedViews((previousViews) =>
+        previousViews.includes(view) ? previousViews : [...previousViews, view],
+      );
+    });
+  };
 
   return (
     <div className="App">
@@ -15,31 +25,47 @@ function App() {
         <nav>
           <button
             className={`nav-button ${currentView === 'ingredients' ? 'active' : ''}`}
-            onClick={() => setCurrentView('ingredients')}>
+            onClick={() => showView('ingredients')}>
             Ингредиенты
           </button>
           <button
             className={`nav-button ${currentView === 'recipes' ? 'active' : ''}`}
-            onClick={() => setCurrentView('recipes')}>
+            onClick={() => showView('recipes')}>
             Рецепты
           </button>
           <button
             className={`nav-button ${currentView === 'plans' ? 'active' : ''}`}
-            onClick={() => setCurrentView('plans')}>
+            onClick={() => showView('plans')}>
             Планы выпечки
           </button>
           <button
             className={`nav-button ${currentView === 'kneading' ? 'active' : ''}`}
-            onClick={() => setCurrentView('kneading')}>
+            onClick={() => showView('kneading')}>
             Списки замеса
           </button>
         </nav>
       </header>
       <main>
-        {currentView === 'ingredients' && <Ingredients />}
-        {currentView === 'recipes' && <Recipes />}
-        {currentView === 'plans' && <BakingPlans />}
-        {currentView === 'kneading' && <KneadingLists />}
+        {mountedViews.includes('ingredients') && (
+          <section className={`view-panel ${currentView === 'ingredients' ? 'active' : ''}`}>
+            <Ingredients isActive={currentView === 'ingredients'} />
+          </section>
+        )}
+        {mountedViews.includes('recipes') && (
+          <section className={`view-panel ${currentView === 'recipes' ? 'active' : ''}`}>
+            <Recipes isActive={currentView === 'recipes'} />
+          </section>
+        )}
+        {mountedViews.includes('plans') && (
+          <section className={`view-panel ${currentView === 'plans' ? 'active' : ''}`}>
+            <BakingPlans isActive={currentView === 'plans'} />
+          </section>
+        )}
+        {mountedViews.includes('kneading') && (
+          <section className={`view-panel ${currentView === 'kneading' ? 'active' : ''}`}>
+            <KneadingLists isActive={currentView === 'kneading'} />
+          </section>
+        )}
       </main>
     </div>
   );

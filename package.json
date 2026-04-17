@@ -1,12 +1,12 @@
 {
   "name": "bakery-app",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Desktop application for bakery management",
   "author": "Bakery Management",
   "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "concurrently \"npm run dev:react\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev": "concurrently \"npm run dev:react\" \"wait-on http://localhost:5173 && set ELECTRON_RENDERER_URL=http://localhost:5173 && electron .\"",
     "dev:react": "cd src/renderer && npm start",
     "build": "cd src/renderer && npm run build",
     "dist": "npm run build && electron-builder --publish never"
@@ -25,12 +25,16 @@
       "node_modules/**/*"
     ],
     "win": {
+      "icon": "src/main/assets/bakery-icon.ico",
       "target": [
         "nsis",
         "portable"
       ]
     },
     "nsis": {
+      "installerIcon": "src/main/assets/bakery-icon.ico",
+      "uninstallerIcon": "src/main/assets/bakery-icon.ico",
+      "installerHeaderIcon": "src/main/assets/bakery-icon.ico",
       "oneClick": false,
       "perMachine": false,
       "allowElevation": true,

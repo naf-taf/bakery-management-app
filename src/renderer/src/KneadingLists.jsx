@@ -1,34 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const { electronAPI } = window;
 
-function KneadingLists() {
+function KneadingLists({ isActive }) {
   const [plans, setPlans] = useState([]);
   const [selectedDate, setSelectedDate] = useState('');
   const [kneadingList, setKneadingList] = useState([]);
+  const buildRequestRef = useRef(0);
 
   useEffect(() => {
-    loadPlans();
-  }, []);
-
-  const loadPlans = async () => {
-    try {
-      const rows = await electronAPI.dbQuery(`
-        SELECT DISTINCT date FROM baking_plans ORDER BY date DESC
-      `);
-      setPlans(rows);
-    } catch (error) {
-      console.error('Error loading plans:', error);
+    if (isActive) {
+      loadPlans();
     }
-  };
+  }, [isActive]);
 
-  const generateKneadingList = async () => {
-    if (!selectedDate) return;
+  const buildKneadingList = async (targetDate) => {
+    if (!targetDate) {
+      buildRequestRef.current += 1;
+      setKneadingList([]);
+      return;
+    }
 
-    try {
-      // Get all plans for the selected date with recipe ingredients
-      const rows = await electronAPI.dbQuery(
-        `
+    const requestId = buildRequestRef.current + 1;
+    buildRequestRef.current = requestId;
+
+    // Get all plans for the selected date with recipe ingredients
+    const rows = await electronAPI.dbQuery(
+      `
         SELECT bp.quantity, r.name as recipe_name, r.yield_quantity, r.yield_unit,
                ri.quantity as ingredient_quantity,
                i.name as ingredient_name, i.unit, i.cost_per_unit
@@ -39,36 +37,68 @@ function KneadingLists() {
         WHERE bp.date = ?
         ORDER BY i.name
       `,
-        [selectedDate],
+      [targetDate],
+    );
+
+    const grouped = {};
+    rows.forEach((row) => {
+      const key = row.ingredient_name;
+      if (!grouped[key]) {
+        grouped[key] = {
+          name: row.ingredient_name,
+          unit: row.unit,
+          total_quantity: 0,
+          cost_per_unit: row.cost_per_unit,
+          recipes: [],
+        };
+      }
+      const scale = row.yield_quantity > 0 ? row.quantity / row.yield_quantity : 0;
+      const quantity = row.ingredient_quantity * scale;
+      grouped[key].total_quantity += quantity;
+      grouped[key].recipes.push(
+        `${row.recipe_name}: ${row.quantity} ${row.yield_unit} (при выходе ${row.yield_quantity} ${row.yield_unit})`,
       );
+    });
 
-      // Group by ingredient
-      const grouped = {};
-      rows.forEach((row) => {
-        const key = row.ingredient_name;
-        if (!grouped[key]) {
-          grouped[key] = {
-            name: row.ingredient_name,
-            unit: row.unit,
-            total_quantity: 0,
-            cost_per_unit: row.cost_per_unit,
-            recipes: [],
-          };
-        }
-        const scale = row.yield_quantity > 0 ? row.quantity / row.yield_quantity : 0;
-        const quantity = row.ingredient_quantity * scale;
-        grouped[key].total_quantity += quantity;
-        grouped[key].recipes.push(
-          `${row.recipe_name}: ${row.quantity} ${row.yield_unit} (при выходе ${row.yield_quantity} ${row.yield_unit})`,
-        );
-      });
+    const list = Object.values(grouped).map((item) => ({
+      ...item,
+      total_cost: item.total_quantity * item.cost_per_unit,
+    }));
 
-      const list = Object.values(grouped).map((item) => ({
-        ...item,
-        total_cost: item.total_quantity * item.cost_per_unit,
-      }));
+    if (buildRequestRef.current !== requestId) {
+      return;
+    }
 
-      setKneadingList(list);
+    setKneadingList(list);
+  };
+
+  const loadPlans = async () => {
+    try {
+      const rows = await electronAPI.dbQuery(`
+        SELECT DISTINCT bp.date
+        FROM baking_plans bp
+        JOIN recipes r ON bp.recipe_id = r.id
+        ORDER BY bp.date DESC
+      `);
+      setPlans(rows);
+
+      const hasSelectedDate = rows.some((plan) => plan.date === selectedDate);
+      if (!hasSelectedDate) {
+        setSelectedDate('');
+        setKneadingList([]);
+      } else if (kneadingList.length > 0) {
+        await buildKneadingList(selectedDate);
+      }
+    } catch (error) {
+      console.error('Error loading plans:', error);
+    }
+  };
+
+  const generateKneadingList = async () => {
+    if (!selectedDate) return;
+
+    try {
+      await buildKneadingList(selectedDate);
     } catch (error) {
       console.error('Error generating kneading list:', error);
     }
@@ -80,7 +110,7 @@ function KneadingLists() {
       kneadingList
         .map(
           (item) =>
-            `${item.name}: ${item.total_quantity} ${item.unit} (Стоимость: ${item.total_cost.toFixed(2)} BYN)\n` +
+            `${item.name}: ${item.total_quantity.toFixed(2)} ${item.unit} (Стоимость: ${item.total_cost.toFixed(2)} BYN)\n` +
             `  Используется в: ${item.recipes.join(', ')}\n`,
         )
         .join('\n');
@@ -119,7 +149,11 @@ function KneadingLists() {
             </label>
             <select
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              onChange={(e) => {
+                buildRequestRef.current += 1;
+                setSelectedDate(e.target.value);
+                setKneadingList([]);
+              }}
               className="modern-input">
               <option value="">Выберите дату</option>
               {plans.map((plan) => (
@@ -174,7 +208,11 @@ function KneadingLists() {
                       {item.total_cost.toFixed(2)} BYN
                     </span>
                   </td>
-                  <td style={{ fontSize: '0.9rem', color: '#666' }}>{item.recipes.join('; ')}</td>
+                  <td style={{ fontSize: '0.9rem', color: '#666' }}>
+                    {item.recipes.map((recipeInfo, recipeIndex) => (
+                      <div key={`${item.name}-${recipeIndex}`}>{recipeInfo}</div>
+                    ))}
+                  </td>
                 </tr>
               ))}
             </tbody>

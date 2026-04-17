@@ -275,8 +275,8 @@ powershell Compress-Archive -Path "dist\*" -DestinationPath "Bakery-Management-v
 
 ```bash
 git add .
-git commit -m "chore: release 1.0.1"
-git tag v1.0.1
+git commit -m "chore: release 1.0.2"
+git tag v1.0.2
 git push origin main --tags
 ```
 
