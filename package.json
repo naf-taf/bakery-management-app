@@ -9,7 +9,7 @@
     "dev": "concurrently \"npm run dev:react\" \"wait-on http://localhost:5173 && electron .\"",
     "dev:react": "cd src/renderer && npm start",
     "build": "cd src/renderer && npm run build",
-    "dist": "npm run build && electron-builder"
+    "dist": "npm run build && electron-builder --publish never"
   },
   "build": {
     "appId": "com.bakery.management",
