@@ -11,7 +11,7 @@ A desktop application for managing bakery operations including ingredients, reci
 
 ## Tech Stack
 
-- **Frontend**: React
+- **Frontend**: React + Vite
 - **Desktop Framework**: Electron
 - **Database**: SQLite
 - **Language**: JavaScript
@@ -44,7 +44,9 @@ For development with hot reload:
 npm run dev
 ```
 
-This will start the React dev server and Electron app concurrently.
+This will start the Vite dev server and Electron app concurrently.
+
+Vite dev server runs at `http://localhost:5173`.
 
 ## Published Version
 
@@ -69,12 +71,12 @@ src/
 │   ├── main.js          # Electron main process
 │   └── preload.js       # Preload script for IPC
 └── renderer/
-    ├── public/
-    │   └── index.html
+      ├── index.html        # Vite HTML entry
+      ├── vite.config.js    # Vite config
     └── src/
-        ├── App.js       # Main React app
+            ├── App.jsx        # Main React app
         ├── App.css      # Styles
-        └── index.js     # React entry point
+            └── index.jsx      # React entry point
 db/
 └── schema.sql           # Database schema
 ```

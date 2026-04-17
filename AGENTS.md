@@ -24,7 +24,7 @@ Use this skill when adding a new domain feature such as ingredients, recipes, ba
 - Add IPC handlers in `src/main/main.js` for any new direct database operations.
 - Expose safe renderer APIs in `src/main/preload.js` if new IPC calls are required.
 - Create a React component in `src/renderer/src/` for the new view.
-- Add a navigation button in `src/renderer/src/App.js` and route the view by state.
+- Add a navigation button in `src/renderer/src/App.jsx` and route the view by state.
 - Use `electronAPI.dbQuery()` and `electronAPI.dbRun()` in renderer code.
 
 ### add-database-table
@@ -57,8 +57,8 @@ Use this skill when renderer code is directly accessing SQLite or using unsafe p
 
 Use this skill when changing UI state, view routing, or component structure.
 
-- Maintain the `App.js` navigation button pattern.
-- Keep the current-view state in `App.js` and conditionally render components.
+- Maintain the `App.jsx` navigation button pattern.
+- Keep the current-view state in `App.jsx` and conditionally render components.
 - Prefer small local state updates inside each component.
 - Preserve inline style patterns unless a refactor to `App.css` is requested.
 
@@ -74,6 +74,6 @@ Use this skill when packaging or preparing a release.
 ## Usage Notes
 
 - Always use the renderer package for UI work and the root package for Electron work.
-- The app currently uses `react-scripts` for the renderer, so maintain compatibility with Create React App conventions.
+- The app uses Vite for the renderer; keep `src/renderer/index.html` and `src/renderer/vite.config.js` in sync with renderer build/dev behavior.
 - `db/bakery.db` is generated automatically during app startup; do not commit generated database files.
 - Follow existing bilingual UI conventions: code is English, visible labels may be Russian.

@@ -17,10 +17,13 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadFile(path.join(__dirname, '../renderer/build/index.html')); // For production
-
-  // For debugging, uncomment:
-  // mainWindow.loadURL('http://localhost:3000');
+  if (app.isPackaged) {
+    mainWindow.loadFile(path.join(__dirname, '../renderer/build/index.html'));
+  } else {
+    mainWindow
+      .loadURL('http://localhost:5173')
+      .catch(() => mainWindow.loadFile(path.join(__dirname, '../renderer/build/index.html')));
+  }
 
   mainWindow.on('closed', () => {
     mainWindow = null;

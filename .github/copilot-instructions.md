@@ -7,7 +7,7 @@ This is an Electron + React desktop application for bakery operations management
 | Task                     | Command         |
 | ------------------------ | --------------- |
 | Development (hot reload) | `npm run dev`   |
-| Build React app          | `npm run build` |
+| Build renderer app       | `npm run build` |
 | Start production app     | `npm start`     |
 | Package as distributable | `npm run dist`  |
 
@@ -30,7 +30,7 @@ This is an Electron + React desktop application for bakery operations management
 
 ### Components
 
-- Navigation-based view system in [src/renderer/src/App.js](../src/renderer/src/App.js)
+- Navigation-based view system in [src/renderer/src/App.jsx](../src/renderer/src/App.jsx)
 - Each module (Ingredients, Recipes, BakingPlans, KneadingLists) is a React component in `src/renderer/src/`
 - UI uses inline styles; consider extracting to `App.css` for consistency
 
@@ -44,7 +44,7 @@ This is an Electron + React desktop application for bakery operations management
 ## Common Pitfalls
 
 1. **Two package.json files**: Don't forget to run `npm install` in both root and `src/renderer`
-2. **Production vs Dev**: Production mode loads built React from `src/renderer/build/index.html`; dev mode uses `http://localhost:3000`
+2. **Production vs Dev**: Production mode loads built renderer from `src/renderer/build/index.html`; dev mode uses `http://localhost:5173`
 3. **Database Paths**: All database operations use paths relative to `src/main/main.js`; paths in renderer must go through IPC
 4. **IPC Calls Are Async**: Always `await` when calling `electronAPI.dbQuery()` or `dbRun()`
 
@@ -55,4 +55,4 @@ When adding features:
 1. Add database schema changes to [db/schema.sql](../db/schema.sql)
 2. Add IPC listeners in `src/main/main.js` if needed
 3. Create React component in `src/renderer/src/` with `electronAPI` calls
-4. Add navigation button in `App.js` to expose the new view
+4. Add navigation button in `App.jsx` to expose the new view

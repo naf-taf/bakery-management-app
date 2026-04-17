@@ -9,9 +9,9 @@ updates:
       time: '04:00'
     open-pull-requests-limit: 5
     reviewers:
-      - 'nekra'
+      - 'gromozeka1'
     assignees:
-      - 'nekra'
+      - 'gromozeka1'
     commit-message:
       prefix: 'chore'
       include: 'scope'
@@ -25,9 +25,9 @@ updates:
       time: '04:30'
     open-pull-requests-limit: 5
     reviewers:
-      - 'nekra'
+      - 'gromozeka1'
     assignees:
-      - 'nekra'
+      - 'gromozeka1'
     commit-message:
       prefix: 'chore'
       include: 'scope'
@@ -41,9 +41,9 @@ updates:
       time: '05:00'
     open-pull-requests-limit: 3
     reviewers:
-      - 'nekra'
+      - 'gromozeka1'
     assignees:
-      - 'nekra'
+      - 'gromozeka1'
     commit-message:
       prefix: 'ci'
       include: 'scope'
