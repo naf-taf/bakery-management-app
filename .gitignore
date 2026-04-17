@@ -1,0 +1,17 @@
+# Node dependencies
+node_modules/
+
+# Electron and React build outputs
+src/renderer/build/
+/dist/
+
+# Local database file
+db/bakery.db
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor and environment files
+.vscode/
+*.log
