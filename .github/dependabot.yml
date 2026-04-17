@@ -1,0 +1,49 @@
+version: 2
+updates:
+  # Monitor npm dependencies in root package.json
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '04:00'
+    open-pull-requests-limit: 5
+    reviewers:
+      - 'nekra'
+    assignees:
+      - 'nekra'
+    commit-message:
+      prefix: 'chore'
+      include: 'scope'
+
+  # Monitor npm dependencies in renderer package.json
+  - package-ecosystem: 'npm'
+    directory: '/src/renderer'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '04:30'
+    open-pull-requests-limit: 5
+    reviewers:
+      - 'nekra'
+    assignees:
+      - 'nekra'
+    commit-message:
+      prefix: 'chore'
+      include: 'scope'
+
+  # Monitor GitHub Actions
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '05:00'
+    open-pull-requests-limit: 3
+    reviewers:
+      - 'nekra'
+    assignees:
+      - 'nekra'
+    commit-message:
+      prefix: 'ci'
+      include: 'scope'
