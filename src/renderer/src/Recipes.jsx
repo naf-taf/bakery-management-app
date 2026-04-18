@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createRecipePdfDefinition, downloadPdf } from './pdfExport';
 
 const { electronAPI } = window;
 
@@ -202,16 +203,39 @@ function Recipes({ isActive }) {
     setShowForm(false);
   };
 
+  const exportRecipePdf = async (recipe) => {
+    try {
+      const ingredientRows = await electronAPI.dbQuery(
+        `
+          SELECT ri.quantity, i.name as ingredient_name, i.unit
+          FROM recipe_ingredients ri
+          JOIN ingredients i ON ri.ingredient_id = i.id
+          WHERE ri.recipe_id = ?
+          ORDER BY i.name
+        `,
+        [recipe.id],
+      );
+
+      const safeRecipeName = recipe.name.replace(/[\\/:*?"<>|]+/g, '-').trim() || 'recipe';
+      await downloadPdf(
+        createRecipePdfDefinition(recipe, ingredientRows),
+        `${safeRecipeName}.pdf`,
+      );
+    } catch (error) {
+      console.error('Error exporting recipe PDF:', error);
+      alert('Ошибка при экспорте рецепта в PDF.');
+    }
+  };
+
   return (
     <div className="content-card">
       <h2>Управление рецептами</h2>
 
-      <button
-        onClick={openCreateRecipeModal}
-        className="modern-button"
-        style={{ marginBottom: '2rem' }}>
-        Добавить новый рецепт
-      </button>
+      <div style={{ marginBottom: '2rem' }}>
+        <button onClick={openCreateRecipeModal} className="modern-button">
+          Добавить новый рецепт
+        </button>
+      </div>
 
       {showForm && (
         <div className="plans-modal-backdrop">
@@ -368,22 +392,30 @@ function Recipes({ isActive }) {
                 {recipe.yield_quantity} {recipe.yield_unit}
               </td>
               <td>
-                <button
-                  onClick={() => handleEdit(recipe)}
-                  className="modern-button secondary"
-                  style={{ marginRight: '0.5rem', padding: '6px 12px', fontSize: '0.9rem' }}>
-                  Изменить
-                </button>
-                <button
-                  onClick={() => handleDelete(recipe.id)}
-                  className="modern-button"
-                  style={{
-                    background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%)',
-                    padding: '6px 12px',
-                    fontSize: '0.9rem',
-                  }}>
-                  Удалить
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => handleEdit(recipe)}
+                    className="modern-button secondary"
+                    style={{ padding: '6px 12px', fontSize: '0.9rem' }}>
+                    Изменить
+                  </button>
+                  <button
+                    onClick={() => exportRecipePdf(recipe)}
+                    className="modern-button secondary"
+                    style={{ padding: '6px 12px', fontSize: '0.9rem' }}>
+                    PDF
+                  </button>
+                  <button
+                    onClick={() => handleDelete(recipe.id)}
+                    className="modern-button"
+                    style={{
+                      background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%)',
+                      padding: '6px 12px',
+                      fontSize: '0.9rem',
+                    }}>
+                    Удалить
+                  </button>
+                </div>
               </td>
             </tr>
           ))}

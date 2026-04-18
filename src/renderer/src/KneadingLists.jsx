@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createKneadingListPdfDefinition, downloadPdf } from './pdfExport';
 
 const { electronAPI } = window;
 
@@ -104,24 +105,16 @@ function KneadingLists({ isActive }) {
     }
   };
 
-  const exportList = () => {
-    const content =
-      `Список замеса на ${selectedDate}\n\n` +
-      kneadingList
-        .map(
-          (item) =>
-            `${item.name}: ${item.total_quantity.toFixed(2)} ${item.unit} (Стоимость: ${item.total_cost.toFixed(2)} BYN)\n` +
-            `  Используется в: ${item.recipes.join(', ')}\n`,
-        )
-        .join('\n');
-
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `kneading-list-${selectedDate}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const exportList = async () => {
+    try {
+      await downloadPdf(
+        createKneadingListPdfDefinition(selectedDate, kneadingList),
+        `kneading-list-${selectedDate}.pdf`,
+      );
+    } catch (error) {
+      console.error('Error exporting kneading list PDF:', error);
+      alert('Ошибка при экспорте PDF. Попробуйте еще раз.');
+    }
   };
 
   return (
@@ -175,7 +168,7 @@ function KneadingLists({ isActive }) {
           </button>
           {kneadingList.length > 0 && (
             <button onClick={exportList} className="modern-button secondary">
-              Экспортировать список
+              Экспортировать PDF
             </button>
           )}
         </div>
