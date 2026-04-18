@@ -1,6 +1,7 @@
 import React, { useDeferredValue, useEffect, useState } from 'react';
 
 const { electronAPI } = window;
+const INGREDIENT_UNITS = ['гр', 'кг'];
 
 function Ingredients({ isActive }) {
   const [ingredients, setIngredients] = useState([]);
@@ -107,14 +108,20 @@ function Ingredients({ isActive }) {
             className="modern-input"
             required
           />
-          <input
-            type="text"
-            placeholder="Единица измерения (например, кг, л, шт)"
+          <select
             value={form.unit}
             onChange={(e) => setForm({ ...form, unit: e.target.value })}
             className="modern-input"
-            required
-          />
+            required>
+            {INGREDIENT_UNITS.map((unit) => (
+              <option key={unit} value={unit}>
+                {unit}
+              </option>
+            ))}
+            {!INGREDIENT_UNITS.includes(form.unit) && form.unit && (
+              <option value={form.unit}>{form.unit} (текущее значение)</option>
+            )}
+          </select>
           <input
             type="number"
             step="0.01"

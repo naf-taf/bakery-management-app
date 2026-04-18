@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS ingredients (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE,
-  unit TEXT NOT NULL, -- e.g., 'kg', 'l', 'pcs'
+  unit TEXT NOT NULL CHECK(unit IN ('гр', 'кг')),
   cost_per_unit REAL DEFAULT 0
 );
 
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS recipes (
   name TEXT NOT NULL UNIQUE,
   description TEXT,
   yield_quantity INTEGER DEFAULT 1, -- how many items the recipe makes
-  yield_unit TEXT DEFAULT 'шт'
+  yield_unit TEXT DEFAULT 'шт' CHECK(yield_unit IN ('гр', 'кг', 'шт'))
 );
 
 -- Recipe ingredients junction table
@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS recipe_ingredients (
   recipe_id INTEGER NOT NULL,
   ingredient_id INTEGER NOT NULL,
   quantity REAL NOT NULL DEFAULT 0,
+  unit TEXT NOT NULL DEFAULT 'гр' CHECK(unit IN ('гр', 'кг')),
   FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE,
   FOREIGN KEY (ingredient_id) REFERENCES ingredients(id) ON DELETE CASCADE,
   UNIQUE(recipe_id, ingredient_id)

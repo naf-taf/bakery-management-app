@@ -280,7 +280,7 @@ async function createTables() {
   await runStatement(`CREATE TABLE IF NOT EXISTS ingredients (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
-      unit TEXT NOT NULL,
+      unit TEXT NOT NULL CHECK(unit IN ('гр', 'кг')),
       cost_per_unit REAL DEFAULT 0
     )`);
 
@@ -289,7 +289,7 @@ async function createTables() {
       name TEXT NOT NULL UNIQUE,
       description TEXT,
       yield_quantity INTEGER DEFAULT 1,
-      yield_unit TEXT DEFAULT 'шт'
+      yield_unit TEXT DEFAULT 'шт' CHECK(yield_unit IN ('гр', 'кг', 'шт'))
     )`);
 
   await runStatement(`CREATE TABLE IF NOT EXISTS recipe_ingredients (
@@ -297,6 +297,7 @@ async function createTables() {
       recipe_id INTEGER NOT NULL,
       ingredient_id INTEGER NOT NULL,
       quantity REAL NOT NULL DEFAULT 0,
+      unit TEXT NOT NULL DEFAULT 'гр' CHECK(unit IN ('гр', 'кг')),
       UNIQUE(recipe_id, ingredient_id),
       FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE,
       FOREIGN KEY (ingredient_id) REFERENCES ingredients(id) ON DELETE CASCADE
@@ -325,6 +326,7 @@ async function createTables() {
   await addColumnIfNotExists('recipe_ingredients', 'recipe_id', 'recipe_id INTEGER');
   await addColumnIfNotExists('recipe_ingredients', 'ingredient_id', 'ingredient_id INTEGER');
   await addColumnIfNotExists('recipe_ingredients', 'quantity', 'quantity REAL NOT NULL DEFAULT 0');
+  await addColumnIfNotExists('recipe_ingredients', 'unit', "unit TEXT NOT NULL DEFAULT 'гр'");
   await addColumnIfNotExists('baking_plans', 'status', "status TEXT DEFAULT 'planned'");
 
   await runStatement('BEGIN IMMEDIATE TRANSACTION');
@@ -332,6 +334,136 @@ async function createTables() {
   try {
     await normalizeDuplicateNames('ingredients');
     await normalizeDuplicateNames('recipes');
+
+    await runStatement(`UPDATE ingredients
+      SET unit = CASE
+        WHEN unit IS NULL OR TRIM(unit) = '' THEN 'гр'
+        WHEN LOWER(TRIM(unit)) IN ('гр', 'г', 'gram', 'grams', 'грамм', 'грамма', 'граммов') THEN 'гр'
+        WHEN LOWER(TRIM(unit)) IN ('кг', 'kg', 'килограмм', 'килограмма', 'килограммов') THEN 'кг'
+        ELSE TRIM(unit)
+      END`);
+
+    await runStatement(`UPDATE recipes
+      SET yield_unit = CASE
+        WHEN yield_unit IS NULL OR TRIM(yield_unit) = '' THEN 'шт'
+        WHEN LOWER(TRIM(yield_unit)) IN ('гр', 'г', 'gram', 'grams', 'грамм', 'грамма', 'граммов') THEN 'гр'
+        WHEN LOWER(TRIM(yield_unit)) IN ('кг', 'kg', 'килограмм', 'килограмма', 'килограммов') THEN 'кг'
+        WHEN LOWER(TRIM(yield_unit)) IN ('шт', 'штука', 'штук', 'pcs', 'pc', 'piece', 'pieces') THEN 'шт'
+        ELSE TRIM(yield_unit)
+      END`);
+
+    await runStatement(`UPDATE recipe_ingredients
+      SET unit = CASE
+        WHEN unit IS NULL OR TRIM(unit) = '' THEN (
+          SELECT i.unit FROM ingredients i WHERE i.id = recipe_ingredients.ingredient_id
+        )
+        WHEN LOWER(TRIM(unit)) IN ('гр', 'г', 'gram', 'grams', 'грамм', 'грамма', 'граммов') THEN 'гр'
+        WHEN LOWER(TRIM(unit)) IN ('кг', 'kg', 'килограмм', 'килограмма', 'килограммов') THEN 'кг'
+        ELSE (
+          SELECT i.unit FROM ingredients i WHERE i.id = recipe_ingredients.ingredient_id
+        )
+      END`);
+
+    await runStatement(`UPDATE recipe_ingredients
+      SET unit = COALESCE(unit, 'гр')`);
+
+    const invalidIngredientsUnits = await readRows(`
+      SELECT id, name, unit
+      FROM ingredients
+      WHERE unit NOT IN ('гр', 'кг')
+      ORDER BY id
+      LIMIT 5
+    `);
+    if (invalidIngredientsUnits.length > 0) {
+      const sample = invalidIngredientsUnits
+        .map((row) => `${row.id}:${row.name}=${row.unit}`)
+        .join(', ');
+      throw new Error(
+        `Unsupported ingredient units found. Please normalize to \'гр\' or \'кг\'. Examples: ${sample}`,
+      );
+    }
+
+    const invalidRecipeYieldUnits = await readRows(`
+      SELECT id, name, yield_unit
+      FROM recipes
+      WHERE yield_unit NOT IN ('гр', 'кг', 'шт')
+      ORDER BY id
+      LIMIT 5
+    `);
+    if (invalidRecipeYieldUnits.length > 0) {
+      const sample = invalidRecipeYieldUnits
+        .map((row) => `${row.id}:${row.name}=${row.yield_unit}`)
+        .join(', ');
+      throw new Error(
+        `Unsupported recipe yield units found. Please normalize to \'гр\', \'кг\', or \'шт\'. Examples: ${sample}`,
+      );
+    }
+
+    const invalidRecipeIngredientUnits = await readRows(`
+      SELECT ri.id, r.name as recipe_name, i.name as ingredient_name, ri.unit
+      FROM recipe_ingredients ri
+      JOIN recipes r ON r.id = ri.recipe_id
+      JOIN ingredients i ON i.id = ri.ingredient_id
+      WHERE ri.unit NOT IN ('гр', 'кг')
+      ORDER BY ri.id
+      LIMIT 5
+    `);
+    if (invalidRecipeIngredientUnits.length > 0) {
+      const sample = invalidRecipeIngredientUnits
+        .map((row) => `${row.id}:${row.recipe_name}/${row.ingredient_name}=${row.unit}`)
+        .join(', ');
+      throw new Error(
+        `Unsupported recipe ingredient units found. Please normalize to \'гр\' or \'кг\'. Examples: ${sample}`,
+      );
+    }
+
+    await runStatement(`CREATE TRIGGER IF NOT EXISTS ingredients_unit_validate_insert
+      BEFORE INSERT ON ingredients
+      FOR EACH ROW
+      WHEN NEW.unit NOT IN ('гр', 'кг')
+      BEGIN
+        SELECT RAISE(ABORT, 'Invalid ingredients unit');
+      END`);
+
+    await runStatement(`CREATE TRIGGER IF NOT EXISTS ingredients_unit_validate_update
+      BEFORE UPDATE OF unit ON ingredients
+      FOR EACH ROW
+      WHEN NEW.unit NOT IN ('гр', 'кг')
+      BEGIN
+        SELECT RAISE(ABORT, 'Invalid ingredients unit');
+      END`);
+
+    await runStatement(`CREATE TRIGGER IF NOT EXISTS recipes_yield_unit_validate_insert
+      BEFORE INSERT ON recipes
+      FOR EACH ROW
+      WHEN NEW.yield_unit NOT IN ('гр', 'кг', 'шт')
+      BEGIN
+        SELECT RAISE(ABORT, 'Invalid recipes yield unit');
+      END`);
+
+    await runStatement(`CREATE TRIGGER IF NOT EXISTS recipes_yield_unit_validate_update
+      BEFORE UPDATE OF yield_unit ON recipes
+      FOR EACH ROW
+      WHEN NEW.yield_unit NOT IN ('гр', 'кг', 'шт')
+      BEGIN
+        SELECT RAISE(ABORT, 'Invalid recipes yield unit');
+      END`);
+
+    await runStatement(`CREATE TRIGGER IF NOT EXISTS recipe_ingredients_unit_validate_insert
+      BEFORE INSERT ON recipe_ingredients
+      FOR EACH ROW
+      WHEN NEW.unit NOT IN ('гр', 'кг')
+      BEGIN
+        SELECT RAISE(ABORT, 'Invalid recipe ingredient unit');
+      END`);
+
+    await runStatement(`CREATE TRIGGER IF NOT EXISTS recipe_ingredients_unit_validate_update
+      BEFORE UPDATE OF unit ON recipe_ingredients
+      FOR EACH ROW
+      WHEN NEW.unit NOT IN ('гр', 'кг')
+      BEGIN
+        SELECT RAISE(ABORT, 'Invalid recipe ingredient unit');
+      END`);
 
     await runStatement(`DELETE FROM kneading_batches
       WHERE plan_id IS NULL
@@ -382,6 +514,30 @@ async function createTables() {
          OR ingredient_id IS NULL
          OR NOT EXISTS (SELECT 1 FROM recipes WHERE recipes.id = recipe_ingredients.recipe_id)
          OR NOT EXISTS (SELECT 1 FROM ingredients WHERE ingredients.id = recipe_ingredients.ingredient_id)`);
+    await runStatement(`UPDATE recipe_ingredients
+      SET quantity = CASE
+            WHEN unit = (
+              SELECT i.unit
+              FROM ingredients i
+              WHERE i.id = recipe_ingredients.ingredient_id
+            ) THEN quantity
+            WHEN unit = 'кг' AND (
+              SELECT i.unit
+              FROM ingredients i
+              WHERE i.id = recipe_ingredients.ingredient_id
+            ) = 'гр' THEN quantity * 1000
+            WHEN unit = 'гр' AND (
+              SELECT i.unit
+              FROM ingredients i
+              WHERE i.id = recipe_ingredients.ingredient_id
+            ) = 'кг' THEN quantity / 1000
+            ELSE quantity
+          END,
+          unit = (
+            SELECT i.unit
+            FROM ingredients i
+            WHERE i.id = recipe_ingredients.ingredient_id
+          )`);
     await runStatement(`UPDATE recipe_ingredients
       SET quantity = (
         SELECT SUM(other.quantity)
