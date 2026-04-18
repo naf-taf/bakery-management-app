@@ -5,8 +5,11 @@
   "author": "Bakery Management",
   "main": "src/main/main.js",
   "scripts": {
-    "start": "electron .",
-    "dev": "concurrently \"npm run dev:react\" \"wait-on http://localhost:5173 && set ELECTRON_RENDERER_URL=http://localhost:5173 && electron .\"",
+    "postinstall": "node scripts/ensure-native-deps.js",
+    "ensure-native-deps": "node scripts/ensure-native-deps.js",
+    "install-app-deps": "electron-builder install-app-deps",
+    "start": "npm run ensure-native-deps && electron .",
+    "dev": "npm run ensure-native-deps && concurrently \"npm run dev:react\" \"wait-on http://localhost:5173 && set ELECTRON_RENDERER_URL=http://localhost:5173 && electron .\"",
     "dev:react": "cd src/renderer && npm start",
     "build": "cd src/renderer && npm run build",
     "dist": "npm run build && electron-builder --publish never"
