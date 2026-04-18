@@ -15,6 +15,22 @@ function KneadingLists({ isActive }) {
     }
   }, [isActive]);
 
+  const convertMassUnits = (value, fromUnit, toUnit) => {
+    if (fromUnit === toUnit) {
+      return value;
+    }
+
+    if (fromUnit === 'кг' && toUnit === 'гр') {
+      return value * 1000;
+    }
+
+    if (fromUnit === 'гр' && toUnit === 'кг') {
+      return value / 1000;
+    }
+
+    return value;
+  };
+
   const buildKneadingList = async (targetDate) => {
     if (!targetDate) {
       buildRequestRef.current += 1;
@@ -29,8 +45,8 @@ function KneadingLists({ isActive }) {
     const rows = await electronAPI.dbQuery(
       `
         SELECT bp.quantity, r.name as recipe_name, r.yield_quantity, r.yield_unit,
-               ri.quantity as ingredient_quantity,
-               i.name as ingredient_name, i.unit, i.cost_per_unit
+           ri.quantity as ingredient_quantity, ri.unit as recipe_ingredient_unit,
+           i.name as ingredient_name, i.unit as ingredient_unit, i.cost_per_unit
         FROM baking_plans bp
         JOIN recipes r ON bp.recipe_id = r.id
         JOIN recipe_ingredients ri ON r.id = ri.recipe_id
@@ -47,14 +63,19 @@ function KneadingLists({ isActive }) {
       if (!grouped[key]) {
         grouped[key] = {
           name: row.ingredient_name,
-          unit: row.unit,
+          unit: row.ingredient_unit,
           total_quantity: 0,
           cost_per_unit: row.cost_per_unit,
           recipes: [],
         };
       }
       const scale = row.yield_quantity > 0 ? row.quantity / row.yield_quantity : 0;
-      const quantity = row.ingredient_quantity * scale;
+      const recipeQuantity = row.ingredient_quantity * scale;
+      const quantity = convertMassUnits(
+        recipeQuantity,
+        row.recipe_ingredient_unit,
+        row.ingredient_unit,
+      );
       grouped[key].total_quantity += quantity;
       grouped[key].recipes.push(
         `${row.recipe_name}: ${row.quantity} ${row.yield_unit} (при выходе ${row.yield_quantity} ${row.yield_unit})`,

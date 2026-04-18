@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRecipePdfDefinition, downloadPdf } from './pdfExport';
 
 const { electronAPI } = window;
+const RECIPE_YIELD_UNITS = ['гр', 'кг', 'шт'];
+const RECIPE_INGREDIENT_UNITS = ['гр', 'кг'];
 
 function Recipes({ isActive }) {
   const [recipes, setRecipes] = useState([]);
@@ -61,6 +63,7 @@ function Recipes({ isActive }) {
         .map((ri) => ({
           ingredient_id: parseInt(ri.ingredient_id, 10),
           quantity: parseFloat(ri.quantity || '0'),
+          unit: ri.unit,
         }));
 
       if (validIngredients.length === 0) {
@@ -88,8 +91,8 @@ function Recipes({ isActive }) {
       // Insert valid recipe ingredients
       for (const ri of validIngredients) {
         await electronAPI.dbRun(
-          'INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity) VALUES (?, ?, ?)',
-          [recipeId, ri.ingredient_id, ri.quantity],
+          'INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity, unit) VALUES (?, ?, ?, ?)',
+          [recipeId, ri.ingredient_id, ri.quantity, ri.unit],
         );
       }
 
@@ -121,7 +124,7 @@ function Recipes({ isActive }) {
     // Load recipe ingredients
     try {
       const rows = await electronAPI.dbQuery(
-        'SELECT ri.*, i.name as ingredient_name, i.unit FROM recipe_ingredients ri JOIN ingredients i ON ri.ingredient_id = i.id WHERE ri.recipe_id = ?',
+        'SELECT ri.*, i.name as ingredient_name, i.unit as ingredient_unit FROM recipe_ingredients ri JOIN ingredients i ON ri.ingredient_id = i.id WHERE ri.recipe_id = ?',
         [recipe.id],
       );
 
@@ -134,7 +137,8 @@ function Recipes({ isActive }) {
           ingredient_id: String(row.ingredient_id),
           quantity: String(row.quantity),
           ingredient_name: row.ingredient_name,
-          unit: row.unit,
+          unit: row.unit || row.ingredient_unit,
+          ingredient_unit: row.ingredient_unit,
         })),
       );
     } catch (error) {
@@ -157,7 +161,7 @@ function Recipes({ isActive }) {
   const addIngredient = () => {
     setRecipeIngredients([
       ...recipeIngredients,
-      { ingredient_id: '', quantity: '', ingredient_name: '', unit: '' },
+      { ingredient_id: '', quantity: '', ingredient_name: '', unit: 'гр', ingredient_unit: 'гр' },
     ]);
   };
 
@@ -176,6 +180,7 @@ function Recipes({ isActive }) {
       const ing = ingredients.find((i) => i.id === numValue);
       if (ing) {
         updated[index].ingredient_name = ing.name;
+        updated[index].ingredient_unit = ing.unit;
         updated[index].unit = ing.unit;
       }
     }
@@ -207,7 +212,7 @@ function Recipes({ isActive }) {
     try {
       const ingredientRows = await electronAPI.dbQuery(
         `
-          SELECT ri.quantity, i.name as ingredient_name, i.unit
+          SELECT ri.quantity, i.name as ingredient_name, ri.unit
           FROM recipe_ingredients ri
           JOIN ingredients i ON ri.ingredient_id = i.id
           WHERE ri.recipe_id = ?
@@ -273,14 +278,20 @@ function Recipes({ isActive }) {
                     min="1"
                     style={{ flex: '1' }}
                   />
-                  <input
-                    type="text"
-                    placeholder="Единица выхода"
+                  <select
                     value={form.yield_unit}
                     onChange={(e) => setForm({ ...form, yield_unit: e.target.value })}
                     className="modern-input"
-                    style={{ flex: '1' }}
-                  />
+                    style={{ flex: '1' }}>
+                    {RECIPE_YIELD_UNITS.map((unit) => (
+                      <option key={unit} value={unit}>
+                        {unit}
+                      </option>
+                    ))}
+                    {!RECIPE_YIELD_UNITS.includes(form.yield_unit) && form.yield_unit && (
+                      <option value={form.yield_unit}>{form.yield_unit} (текущее значение)</option>
+                    )}
+                  </select>
                 </div>
               </div>
 
@@ -336,7 +347,17 @@ function Recipes({ isActive }) {
                     style={{ flex: '1' }}
                     required
                   />
-                  <span style={{ flex: '0.5', color: '#666' }}>{ri.unit}</span>
+                  <select
+                    value={ri.unit}
+                    onChange={(e) => updateIngredient(index, 'unit', e.target.value)}
+                    className="modern-input"
+                    style={{ flex: '0.7' }}>
+                    {RECIPE_INGREDIENT_UNITS.map((unit) => (
+                      <option key={unit} value={unit}>
+                        {unit}
+                      </option>
+                    ))}
+                  </select>
                   <button
                     type="button"
                     onClick={() => removeIngredient(index)}
