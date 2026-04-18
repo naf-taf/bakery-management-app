@@ -406,7 +406,9 @@ async function createTables() {
       ON recipe_ingredients(recipe_id, ingredient_id)`);
     await runStatement(`CREATE UNIQUE INDEX IF NOT EXISTS baking_plans_date_recipe_id_unique
       ON baking_plans(date, recipe_id)`);
-    await runStatement(`CREATE UNIQUE INDEX IF NOT EXISTS ingredients_name_unique ON ingredients(name)`);
+    await runStatement(
+      `CREATE UNIQUE INDEX IF NOT EXISTS ingredients_name_unique ON ingredients(name)`,
+    );
     await runStatement(`CREATE UNIQUE INDEX IF NOT EXISTS recipes_name_unique ON recipes(name)`);
     await runStatement('COMMIT');
   } catch (error) {
