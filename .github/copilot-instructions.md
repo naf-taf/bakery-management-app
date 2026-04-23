@@ -48,14 +48,23 @@ When making code changes, validate at minimum:
 - Use React hooks for component state and side effects.
 - Keep visible labels aligned with current bilingual style (English code, Russian UI labels where already used).
 
+## Display Conventions
+
+- Ingredient quantities in `кг` are shown with 3 decimal places (precision to 1 gram).
+- Ingredient quantities in `гр` are shown as whole integers.
+- Apply the same logic in both UI (`KneadingLists.jsx`) and PDF export (`pdfExport.js`).
+
 ## Release And CI
 
 - CI workflow validates branch/PR builds.
 - Release workflow triggers on tags matching `v*.*.*`.
-- Standard release flow:
-  1.  Commit changes to main.
-  2.  Create tag: `git tag vX.Y.Z`.
-  3.  Push tag: `git push origin vX.Y.Z`.
+- Current version: `1.0.4`. Bump version in **both** `package.json` and `src/renderer/package.json`.
+- Standard release flow (must be followed every time):
+  1. Bump version in both `package.json` files.
+  2. Commit and push to `main`.
+  3. Create annotated tag: `git tag -a vX.Y.Z -m "Release vX.Y.Z"`.
+  4. Push tag: `git push origin vX.Y.Z` — this triggers the release pipeline.
+- SemVer rule: PATCH for fixes, MINOR for new features, MAJOR for breaking changes.
 
 ## Change Scope Guidance
 
