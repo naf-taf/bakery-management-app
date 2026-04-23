@@ -265,22 +265,61 @@ powershell Compress-Archive -Path "dist\*" -DestinationPath "Bakery-Management-v
 ### Процесс выпуска обновления
 
 1. Внесите изменения в код
-2. Увеличьте версию в `package.json`
-3. Протестируйте изменения
-4. Закоммитьте изменения и создайте тег версии вида `vX.Y.Z`
-5. Отправьте изменения и тег в репозиторий
-6. GitHub Actions автоматически соберет релиз и опубликует артефакты
+2. Выберите новую версию по SemVer (`MAJOR.MINOR.PATCH`), например `1.0.4`
+3. Обновите версии в обоих файлах: `package.json` и `src/renderer/package.json`
+4. Протестируйте изменения (`npm run build`, `npm run dist`)
+5. Закоммитьте изменения
+6. Создайте тег версии формата `vX.Y.Z`
+7. Отправьте ветку и тег в репозиторий
+8. GitHub Actions автоматически соберет релиз и опубликует артефакты
 
 Пример:
 
 ```bash
+npm version 1.0.4 --no-git-tag-version
+npm version 1.0.4 --no-git-tag-version --prefix src/renderer
+
+npm run build
+npm run dist
+
 git add .
-git commit -m "chore: release 1.0.2"
-git tag v1.0.2
-git push origin main --tags
+git commit -m "chore: release 1.0.4"
+git tag -a v1.0.4 -m "Release v1.0.4"
+git push origin main
+git push origin v1.0.4
 ```
 
-Workflow `.github/workflows/release.yml` публикует GitHub Release и прикрепляет файлы из `dist/`.
+Workflow `.github/workflows/release.yml` срабатывает при push тега `v*.*.*`, публикует GitHub Release и прикрепляет файлы из `dist/`.
+
+Правило выбора версии (SemVer):
+
+- PATCH (`1.0.3 -> 1.0.4`) для исправлений без изменения API/поведения для пользователей.
+- MINOR (`1.0.3 -> 1.1.0`) для новых возможностей с обратной совместимостью.
+- MAJOR (`1.0.3 -> 2.0.0`) для несовместимых изменений.
+
+Краткий чеклист релиза (copy-paste):
+
+```bash
+# Укажите новую версию один раз
+set VERSION=1.0.4
+
+# Обновите версии в обоих package.json
+npm version %VERSION% --no-git-tag-version
+npm version %VERSION% --no-git-tag-version --prefix src/renderer
+
+# Проверка сборки
+npm run build
+npm run dist
+
+# Коммит и тег
+git add .
+git commit -m "chore: release %VERSION%"
+git tag -a v%VERSION% -m "Release v%VERSION%"
+
+# Публикация ветки и тега
+git push origin main
+git push origin v%VERSION%
+```
 
 ### Совместимость версий
 

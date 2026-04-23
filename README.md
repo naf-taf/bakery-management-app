@@ -67,21 +67,61 @@ The project uses tag-based releases.
 - Release workflow (`.github/workflows/release.yml`) runs automatically when a Git tag matching `v*.*.*` is pushed.
 - The release workflow builds the app and publishes GitHub Release assets from `dist/`.
 
-Release steps:
+Recommended release steps:
 
 ```bash
-# 1) Update versions in package.json files if needed
+# 1) Choose next semantic version (MAJOR.MINOR.PATCH)
+# Example used below: 1.0.4
 
-# 2) Commit changes
+# 2) Bump version in both package.json files (without creating git tag yet)
+npm version 1.0.4 --no-git-tag-version
+npm version 1.0.4 --no-git-tag-version --prefix src/renderer
+
+# 3) Validate build and packaging
+npm run build
+npm run dist
+
+# 4) Commit version changes
 git add .
-git commit -m "chore: release 1.0.2"
+git commit -m "chore: release 1.0.4"
 
-# 3) Create and push a version tag
-git tag v1.0.2
-git push origin main --tags
+# 5) Create and push an annotated version tag
+git tag -a v1.0.4 -m "Release v1.0.4"
+git push origin main
+git push origin v1.0.4
 ```
 
-After the tag push, GitHub Actions will create the release and attach installer/portable artifacts automatically.
+After the tag is pushed, GitHub Actions starts `.github/workflows/release.yml`, creates the GitHub Release, and attaches installer/portable artifacts from `dist/`.
+
+Notes:
+
+- Keep root `package.json` and `src/renderer/package.json` on the same version.
+- Use tag format exactly as `vX.Y.Z` (for example `v1.0.4`) so release automation is triggered.
+- SemVer bump rule: increment PATCH for fixes (`1.0.3 -> 1.0.4`), MINOR for backward-compatible features (`1.0.3 -> 1.1.0`), MAJOR for breaking changes (`1.0.3 -> 2.0.0`).
+
+Quick release checklist (copy-paste):
+
+```bash
+# Set next version once
+set VERSION=1.0.4
+
+# Bump both package versions
+npm version %VERSION% --no-git-tag-version
+npm version %VERSION% --no-git-tag-version --prefix src/renderer
+
+# Validate
+npm run build
+npm run dist
+
+# Commit and tag
+git add .
+git commit -m "chore: release %VERSION%"
+git tag -a v%VERSION% -m "Release v%VERSION%"
+
+# Push branch and tag
+git push origin main
+git push origin v%VERSION%
+```
 
 ## Database
 
