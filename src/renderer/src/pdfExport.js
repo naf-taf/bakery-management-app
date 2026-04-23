@@ -72,7 +72,7 @@ export function createKneadingListPdfDefinition(selectedDate, kneadingList) {
                         ],
                         ...kneadingList.map((item) => [
                             { text: item.name, style: 'tableCellStrong' },
-                            { text: `${formatNumber(item.total_quantity)} ${item.unit}`, style: 'tableCell' },
+                            { text: `${formatNumber(item.total_quantity, item.unit === 'кг' ? 3 : 0)} ${item.unit}`, style: 'tableCell' },
                             { text: `${formatNumber(item.total_cost)} BYN`, style: 'tableCell' },
                             {
                                 ul: item.recipes.map((recipe) => ({ text: recipe, margin: [0, 0, 0, 2] })),

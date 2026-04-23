@@ -1,6 +1,6 @@
 {
   "name": "bakery-app",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Desktop application for bakery management",
   "author": "Bakery Management",
   "main": "src/main/main.js",

@@ -213,7 +213,9 @@ function KneadingLists({ isActive }) {
                   <td style={{ fontWeight: '500' }}>{item.name}</td>
                   <td>
                     <span style={{ fontSize: '1.1rem', fontWeight: '600', color: '#667eea' }}>
-                      {item.total_quantity.toFixed(2)}
+                      {item.unit === 'кг'
+                        ? item.total_quantity.toFixed(3)
+                        : Math.round(item.total_quantity)}
                     </span>
                     <span style={{ marginLeft: '0.5rem', color: '#666' }}>{item.unit}</span>
                   </td>
