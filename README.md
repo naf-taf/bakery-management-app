@@ -93,17 +93,22 @@ git push origin v1.0.4
 
 After the tag is pushed, GitHub Actions starts `.github/workflows/release.yml`, creates the GitHub Release, and attaches installer/portable artifacts from `dist/`.
 
+> **ВАЖНО: каждый раз при выпуске новой версии необходимо:**
+> 1. Обновить `version` в `package.json` и `src/renderer/package.json`
+> 2. Закоммитить изменения и запушить ветку
+> 3. Создать и запушить аннотированный тег `vX.Y.Z` — только тег запускает релизный пайплайн
+
 Notes:
 
 - Keep root `package.json` and `src/renderer/package.json` on the same version.
 - Use tag format exactly as `vX.Y.Z` (for example `v1.0.4`) so release automation is triggered.
-- SemVer bump rule: increment PATCH for fixes (`1.0.3 -> 1.0.4`), MINOR for backward-compatible features (`1.0.3 -> 1.1.0`), MAJOR for breaking changes (`1.0.3 -> 2.0.0`).
+- SemVer bump rule: increment PATCH for fixes (`1.0.4 -> 1.0.5`), MINOR for backward-compatible features (`1.0.4 -> 1.1.0`), MAJOR for breaking changes (`1.0.4 -> 2.0.0`).
 
 Quick release checklist (copy-paste):
 
 ```bash
-# Set next version once
-set VERSION=1.0.4
+# Set next version once (update X.Y.Z each release)
+set VERSION=1.0.5
 
 # Bump both package versions
 npm version %VERSION% --no-git-tag-version
