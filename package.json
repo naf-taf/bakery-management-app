@@ -42,9 +42,15 @@
       "perMachine": false,
       "allowElevation": true,
       "allowToChangeInstallationDirectory": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "naf-taf",
+      "repo": "bakery-management-app"
     }
   },
   "dependencies": {
+    "electron-updater": "^6.8.3",
     "picomatch": "^4.0.4",
     "sqlite3": "^6.0.1"
   },

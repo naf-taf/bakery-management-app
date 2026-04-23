@@ -1,7 +1,8 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
+const { autoUpdater } = require('electron-updater');
 
 let mainWindow;
 let db;
@@ -123,6 +124,9 @@ app.whenReady().then(async () => {
   try {
     await initializeDatabase();
     createWindow();
+    if (app.isPackaged) {
+      autoUpdater.checkForUpdatesAndNotify();
+    }
   } catch (error) {
     console.error('Failed to initialize application:', error);
     app.quit();
