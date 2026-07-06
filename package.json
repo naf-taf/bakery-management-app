@@ -50,15 +50,15 @@
     }
   },
   "dependencies": {
-    "electron-updater": "^6.8.3",
-    "picomatch": "^4.0.4",
+    "electron-updater": "^6.8.9",
+    "picomatch": "^4.0.5",
     "sqlite3": "^6.0.1"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1",
-    "electron": "^41.2.1",
-    "electron-builder": "^26.8.1",
-    "wait-on": "^9.0.5"
+    "concurrently": "^10.0.3",
+    "electron": "^43.0.0",
+    "electron-builder": "^26.15.3",
+    "wait-on": "^9.0.10"
   },
   "overrides": {
     "glob": "^13.0.0",
